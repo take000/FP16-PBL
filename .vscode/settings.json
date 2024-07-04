@@ -1,0 +1,4 @@
+{
+    "editor.formatOnSave": true,
+    "C_Cpp.clang_format_style": "{ UseTab: Never, BreakBeforeBraces: Attach, AllowShortIfStatementsOnASingleLine: AllIfsAndElse, IndentWidth: 4, IndentCaseLabels: false, ColumnLimit: 0, AllowShortLoopsOnASingleLine: true}",
+}
