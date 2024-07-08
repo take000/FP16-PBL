@@ -285,7 +285,7 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
 
     if (ex1_d.nan) {
         ex2_d.s = 1;
-        ex2_d.frac = 0x400;
+        ex2_d.frac = 0x200;
         ex2_d.exp = 0x1f;
 
     } else if (ex1_d.inf) {
