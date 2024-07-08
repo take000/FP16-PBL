@@ -405,12 +405,10 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
 
 int main() {
     short ans;
-
-    // printf("%x\n", 0b0100000000000000);
-    soft16(0b0011110000000000, 0b0100000000000000, 0b0100001000000000, &ans, 0);
-    // soft16(0b0011110000000000, 0b0011110000000000, 0b0011110000000000, &ans, 0);
-
-    printf("\n\n%x", ans);
+    Uint a, b, c;
+    scanf("%x %x %x", &a, &b, &c);
+    soft16(a, b, c, &ans, 0);
+    printf("%x\n", ans);
 
     return 0;
 }
