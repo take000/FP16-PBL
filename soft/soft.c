@@ -373,7 +373,7 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
             printf("zero\n");
         }
         ex2_d.s = 0;
-        ex2_d.frac = 0x000000;
+        ex2_d.frac = 0x000;
         ex2_d.exp = 0x00;
     }
 #endif

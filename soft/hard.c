@@ -368,7 +368,6 @@ void hard16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     if (debug) {
         printf("//ex2_d.frac =%08.8x_%08.8x(a+c+s)\n", (Uint)((Ull)ex2_d.frac >> 32), (Uint)ex2_d.frac);
     }
-    printf("\n\n%x", ex2_d.frac);
 
 #define FLOAT_PZERO 0x0000
 #define FLOAT_NZERO 0x8000
@@ -531,7 +530,7 @@ void hard16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
             printf("zero\n");
         }
         ex3_d.s = 0;
-        ex3_d.frac = 0x000000;
+        ex3_d.frac = 0x000;
         ex3_d.exp = 0x00;
     }
     // #endif
@@ -542,7 +541,7 @@ void hard16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
 
     out.raw.w = (ex3_d.s << 15) | (ex3_d.exp << 10) | (ex3_d.frac);
     org.flo.w = i1 + i2 * i3;
-
+    printf("\n\n%x", out.raw.w);
     /*
     Uint diff = out.raw.w > org.raw.w ? out.raw.w - org.raw.w : org.raw.w - out.raw.w;
 
@@ -568,9 +567,8 @@ int main() {
 
     // printf("%x\n", 0b0100000000000000);
     // hard16(0b0011110000000000, 0b0100000000000000, 0b0100001000000000, &ans, 1);
-    hard16(0b0011110000000000, 0b0011110000000000, 0b0011110000000000, &ans, 0);
 
-    printf("\n\n%x", ans);
+    hard16(0b0011110011110000, 0b0011110011110000, 0b0011110011110000, &ans, 0);
 
     return 0;
 }
