@@ -126,9 +126,11 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     s2.inf = (in2.base.exp == 31) && (in2.base.frac == 0);
     s2.nan = (in2.base.exp == 31) && (in2.base.frac != 0);
 
-    printf("\n%d %d %d\n", s1.s, s1.exp, s1.frac);
-    printf("%d %d %d\n", s2.s, s2.exp, s2.frac);
-    printf("%d %d %d\n", s3.s, s3.exp, s3.frac);
+    if (debug) {
+        printf("\n%d %d %d\n", s1.s, s1.exp, s1.frac);
+        printf("%d %d %d\n", s2.s, s2.exp, s2.frac);
+        printf("%d %d %d\n", s3.s, s3.exp, s3.frac);
+    }
 
     fmul_s1.s = s2.s;
     fmul_s1.exp = s2.exp;
@@ -159,7 +161,7 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     fmul_d.nan = fmul_s1.nan || fmul_s2.nan || (fmul_s1.inf && fmul_s2.zero) ||
                  (fmul_s2.inf && fmul_s1.zero);
 
-    printf("\n%d %d %d\n", fmul_d.s, fmul_d.exp, fmul_d.frac);
+    if (debug) printf("\n%d %d %d\n", fmul_d.s, fmul_d.exp, fmul_d.frac);
 
     fadd_s1.s = s1.s;
     fadd_s1.exp = (0 < s1.exp && s1.exp < 31) ? (s1.exp - 1) : s1.exp;
@@ -169,7 +171,7 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     fadd_s1.inf = s1.inf;
     fadd_s1.nan = s1.nan;
 
-    printf("\n%d %d %d\n", fadd_s1.s, fadd_s1.exp, fadd_s1.frac);
+    if (debug) printf("\n%d %d %d\n", fadd_s1.s, fadd_s1.exp, fadd_s1.frac);
 
     fadd_s2.s = fmul_d.s;
     fadd_s2.exp = fmul_d.exp;
@@ -178,7 +180,7 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     fadd_s2.inf = fmul_d.inf;
     fadd_s2.nan = fmul_d.nan;
 
-    printf("%d %d %d\n", fadd_s2.s, fadd_s2.exp, fadd_s2.frac);
+    if (debug) printf("%d %d %d\n", fadd_s2.s, fadd_s2.exp, fadd_s2.frac);
 
     fadd_w.exp_comp = fadd_s1.exp > fadd_s2.exp ? 1 : 0;
     fadd_w.exp_diff = fadd_w.exp_comp ? (fadd_s1.exp - fadd_s2.exp)
@@ -218,7 +220,7 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     ex1_d.inf = fadd_d.inf;
     ex1_d.nan = fadd_d.nan;
 
-    printf("\n%d %d %d\n", fadd_d.s, fadd_d.exp, fadd_d.frac);
+    if (debug) printf("\n%d %d %d\n", fadd_d.s, fadd_d.exp, fadd_d.frac);
 
 #if 1
     ex2_w.lzc = (ex1_d.frac & 0x1000LL << PEXT)   ? 30
@@ -381,8 +383,10 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     }
 
     out.raw.w = (ex2_d.s << 15) | (ex2_d.exp << 10) | (ex2_d.frac);
-    printf("\n%d\n", ex2_w.lzc);
-    printf("\n%d %d %d\n", ex2_d.s, ex2_d.exp, ex2_d.frac);
+    if (debug) {
+        printf("\n%d\n", ex2_w.lzc);
+        printf("\n%d %d %d\n", ex2_d.s, ex2_d.exp, ex2_d.frac);
+    }
     org.flo.w = i1 + i2 * i3;
     Uint diff =
         out.raw.w > org.raw.w ? out.raw.w - org.raw.w : org.raw.w - out.raw.w;
