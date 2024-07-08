@@ -89,7 +89,7 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     } ex1_d;
 
     struct ex2_w {
-        Uint lzc : 6;
+        Uint lzc : 5;
     } ex2_w;
 
     struct ex2_d {
@@ -126,7 +126,9 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     s2.inf = (in2.base.exp == 31) && (in2.base.frac == 0);
     s2.nan = (in2.base.exp == 31) && (in2.base.frac != 0);
 
-    printf("\n%d %d %d\n", s2.s, s2.exp, s2.frac);
+    printf("\n%d %d %d\n", s1.s, s1.exp, s1.frac);
+    printf("%d %d %d\n", s2.s, s2.exp, s2.frac);
+    printf("%d %d %d\n", s3.s, s3.exp, s3.frac);
 
     fmul_s1.s = s2.s;
     fmul_s1.exp = s2.exp;
@@ -140,8 +142,6 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     fmul_s2.zero = s3.zero;
     fmul_s2.inf = s3.inf;
     fmul_s2.nan = s3.nan;
-
-    printf("\n%d %d %d\n", fmul_s2.s, fmul_s2.exp, fmul_s2.frac);
 
     /* nan  * any  -> nan */
     /* inf  * zero -> nan */
@@ -160,6 +160,7 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
                  (fmul_s2.inf && fmul_s1.zero);
 
     printf("\n%d %d %d\n", fmul_d.s, fmul_d.exp, fmul_d.frac);
+
     fadd_s1.s = s1.s;
     fadd_s1.exp = (0 < s1.exp && s1.exp < 31) ? (s1.exp - 1) : s1.exp;
     fadd_s1.frac = (0 < s1.exp && s1.exp < 31) ? (Ull)s1.frac << (PEXT + 1)
@@ -167,12 +168,17 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     fadd_s1.zero = s1.zero;
     fadd_s1.inf = s1.inf;
     fadd_s1.nan = s1.nan;
+
+    printf("\n%d %d %d\n", fadd_s1.s, fadd_s1.exp, fadd_s1.frac);
+
     fadd_s2.s = fmul_d.s;
     fadd_s2.exp = fmul_d.exp;
     fadd_s2.frac = fmul_d.frac >> (10 - PEXT); // ★★★ガード対応必要
     fadd_s2.zero = fmul_d.zero;
     fadd_s2.inf = fmul_d.inf;
     fadd_s2.nan = fmul_d.nan;
+
+    printf("%d %d %d\n", fadd_s2.s, fadd_s2.exp, fadd_s2.frac);
 
     fadd_w.exp_comp = fadd_s1.exp > fadd_s2.exp ? 1 : 0;
     fadd_w.exp_diff = fadd_w.exp_comp ? (fadd_s1.exp - fadd_s2.exp)
@@ -212,11 +218,10 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     ex1_d.inf = fadd_d.inf;
     ex1_d.nan = fadd_d.nan;
 
-    printf("%d %d %d", fadd_d.s, fadd_d.exp, fadd_d.frac);
+    printf("\n%d %d %d\n", fadd_d.s, fadd_d.exp, fadd_d.frac);
 
 #if 1
-    ex2_w.lzc = (ex1_d.frac & 0x2000LL << PEXT)   ? 29
-                : (ex1_d.frac & 0x1000LL << PEXT) ? 30
+    ex2_w.lzc = (ex1_d.frac & 0x1000LL << PEXT)   ? 30
                 : (ex1_d.frac & 0x0800LL << PEXT) ? 31
                 : (ex1_d.frac & 0x0400LL << PEXT) ? 0
                 : (ex1_d.frac & 0x0200LL << PEXT) ? 1
@@ -228,9 +233,10 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
                 : (ex1_d.frac & 0x0008LL << PEXT) ? 7
                 : (ex1_d.frac & 0x0004LL << PEXT) ? 8
                 : (ex1_d.frac & 0x0002LL << PEXT) ? 9
+                : (ex1_d.frac & 0x0001LL << PEXT) ? 10
                 :
 #if (PEXT >= 1)
-                (ex1_d.frac & 0x0001LL << PEXT - 1) ? 10
+                (ex1_d.frac & 0x0001LL << PEXT - 1) ? 11
                 :
 #endif
 #if (PEXT >= 2)
@@ -284,7 +290,7 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
         ex2_d.s = ex1_d.s;
         ex2_d.frac = 0x000;
         ex2_d.exp = 0x1f;
-    } else if (ex2_w.lzc == 31) {
+    } else if (ex2_w.lzc == 30) {
         if (debug) {
             printf("lzc==%d\n", ex2_w.lzc);
         }
@@ -375,6 +381,8 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     }
 
     out.raw.w = (ex2_d.s << 15) | (ex2_d.exp << 10) | (ex2_d.frac);
+    printf("\n%d\n", ex2_w.lzc);
+    printf("\n%d %d %d\n", ex2_d.s, ex2_d.exp, ex2_d.frac);
     org.flo.w = i1 + i2 * i3;
     Uint diff =
         out.raw.w > org.raw.w ? out.raw.w - org.raw.w : org.raw.w - out.raw.w;
@@ -395,8 +403,9 @@ int main() {
     short ans;
 
     // printf("%x\n", 0b0100000000000000);
-    soft16(0b0000000000000000, 0b0011110000000000, 0b0000000000000000, &ans, 0);
-    
+    soft16(0b0011110000000000, 0b0100000000000000, 0b0100001000000000, &ans, 0);
+    // soft16(0b0011110000000000, 0b0011110000000000, 0b0011110000000000, &ans, 0);
+
     printf("\n\n%x", ans);
 
     return 0;
