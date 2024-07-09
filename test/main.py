@@ -43,7 +43,7 @@ def test_random_test(seed, num):
         if output != f'{ans_hex:04X}':
             output_val = hex_to_fp16(int(output, 16))
 
-            diff = abs(ans_hex - int(output, 16))
+            diff = abs(int(ans_hex) - int(output, 16))
 
             if np.isnan(ans) and np.isnan(output_val):
                 continue
