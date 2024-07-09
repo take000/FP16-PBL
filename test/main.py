@@ -45,6 +45,9 @@ def test_random_test(seed, num):
 
             diff = abs(ans_hex - int(output, 16))
 
+            if np.isnan(ans) and np.isnan(output_val):
+                continue
+
             # 実装仕様的に誤差2までは起きそうなので、それ以上の誤差のみ
             if diff > 2:
                 print(f"{a}+{b}*{c}={ans}!={output_val}")
