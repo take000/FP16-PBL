@@ -403,12 +403,21 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     return;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     short ans;
     Uint a, b, c;
-    scanf("%x %x %x", &a, &b, &c);
+
+    if (argc == 1) {
+        scanf("%x %x %x", &a, &b, &c);
+    } else if (argc == 4) {
+        sscanf(argv[1], "%x", &a);
+        sscanf(argv[2], "%x", &b);
+        sscanf(argv[3], "%x", &c);
+    } else {
+        return 1;
+    }
     soft16(a, b, c, &ans, 0);
-    printf("%x\n", ans);
+    printf("%04X\n", ans & 0xFFFF);
 
     return 0;
 }
