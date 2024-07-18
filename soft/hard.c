@@ -72,11 +72,12 @@ void partial_product(Uint *pp, Uint *ps, Uint a, Uint b, Uint pos) {
     case 1:
     case 2:
     case 3:
+    case 4:
         *pp = (1 << 13) | ((~ts & 1) << 12) | tp;
         printf("\npp:%x", (1 << 13) | ((~ts & 1) << 12) | tp);
         *ps = ts;
         break;
-    case 4:
+    case 5:
         *pp = ((~ts & 1) << 12) | tp;
         printf("\npp:%x", ((~ts & 1) << 12) | tp);
         *ps = ts;
@@ -234,8 +235,10 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     pp[4] = ((Ull)tp << 8) | ((Ull)ps[3] << 6); // if (debug) {printf("pp[ 4]=%04.4x_%08.8x ps[ 4]=%d\n", (Uint)(pp[ 4]>>32), (Uint)pp[ 4], ps[ 4]);} /*9,8, 7*/
     partial_product(&tp, &ps[5], s2.frac, (s3.frac >> 9) & 7, 5);
     pp[5] = ((Ull)tp << 10) | ((Ull)ps[4] << 8); // if (debug) {printf("pp[ 5]=%04.4x_%08.8x ps[ 5]=%d\n", (Uint)(pp[ 5]>>32), (Uint)pp[ 5], ps[ 5]);} /*11,10,9*/
+    partial_product(&tp, &ps[6], s2.frac, (s3.frac >> 11) & 7, 6);
+    pp[6] = ((Ull)tp << 12) | ((Ull)ps[5] << 10); // if (debug) {printf("pp[ 5]=%04.4x_%08.8x ps[ 5]=%d\n", (Uint)(pp[ 5]>>32), (Uint)pp[ 5], ps[ 5]);} /*11,10,9*/
 
-    Ull x1 = (pp[0] + pp[1] + pp[2] + pp[3] + pp[4] + pp[5]);
+    Ull x1 = (pp[0] + pp[1] + pp[2] + pp[3] + pp[4] + pp[5] + pp[6]);
     printf("//x1(sum of pp)=%08.8x_%08.8x ->>10 %08.8x\n", (Uint)(x1 >> 16), (Uint)x1, (Uint)(x1 >> 10));
     printf("\n%llx\n", x1);
     printf("%x", ex1_d.exp);
@@ -264,7 +267,7 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     printf("\nC1[1]==%llx\n", (Ull)C1[1]);
 
     csa_line(&C2[0], &S2[0], S1[0], C1[0], S1[1]);
-    csa_line(&C2[1], &S2[1], C1[1], 0, 0);
+    csa_line(&C2[1], &S2[1], C1[1], pp[6], 0);
 
     csa_line(&C3[0], &S3[0], S2[0], C2[0], S2[1]);
     csa_line(&C3[1], &S3[1], C2[1], 0, 0);
@@ -274,6 +277,8 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
 
     ex1_d.csa_s = S5; // sum
     ex1_d.csa_c = C5; // carry
+
+    printf("%llx", S5 + C5);
 
     ex1_d.zero = (s2.zero && !s3.inf && !s3.nan) || (s3.zero && !s2.inf && !s2.nan);
     ex1_d.inf = (s2.inf && !s3.zero && !s3.nan) || (s3.inf && !s2.zero && !s2.nan);
@@ -295,7 +300,7 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     /**************************************************************************************************************/
     fadd_s1.s = s1.s;
     fadd_s1.exp = (0 < s1.exp && s1.exp < 31) ? (s1.exp - 1) : s1.exp;
-    fadd_s1.frac = (0 < s1.exp && s1.exp < 31) ? (Ull)s1.frac << (10 + 1) : (Ull)s1.frac << 10;
+    fadd_s1.frac = (0 < s1.exp && s1.exp < 31) ? (Ull)s1.frac << (PEXT + 1) : (Ull)s1.frac << PEXT;
     fadd_s1.zero = s1.zero;
     fadd_s1.inf = s1.inf;
     fadd_s1.nan = s1.nan;
@@ -308,14 +313,14 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     /* -inf + (~inf  & ~nan) -> inf */
     fadd_w.exp_comp = fadd_s1.exp > ex1_d.exp ? 1 : 0;
     fadd_w.exp_diff = fadd_w.exp_comp ? (fadd_s1.exp - ex1_d.exp) : (ex1_d.exp - fadd_s1.exp);
-    if (fadd_w.exp_diff > 22)
-        fadd_w.exp_diff = 22;
+    if (fadd_w.exp_diff > (12 + PEXT))
+        fadd_w.exp_diff = (12 + PEXT);
     fadd_w.align_exp = fadd_w.exp_comp ? fadd_s1.exp : ex1_d.exp;
     fadd_w.s1_align_frac = fadd_s1.frac >> (fadd_w.exp_comp ? 0 : fadd_w.exp_diff);
-    fadd_w.s2_align_frac = (Ull)ex1_d.csa_s >> (ex1_d.zero ? 22 : fadd_w.exp_comp ? fadd_w.exp_diff
-                                                                                  : 0);
-    fadd_w.s3_align_frac = (Ull)ex1_d.csa_c >> (ex1_d.zero ? 22 : fadd_w.exp_comp ? fadd_w.exp_diff
-                                                                                  : 0);
+    fadd_w.s2_align_frac = ex1_d.csa_s >> (ex1_d.zero ? (12 + PEXT) : fadd_w.exp_comp ? fadd_w.exp_diff
+                                                                                      : 0);
+    fadd_w.s3_align_frac = ex1_d.csa_c >> (ex1_d.zero ? (12 + PEXT) : fadd_w.exp_comp ? fadd_w.exp_diff
+                                                                                      : 0);
     // if (debug) {
     //     printf("//fadd_s1: %x %02.2x %08.8x_%08.8x (%x)-> %x %08.8x_%08.8x\n", fadd_s1.s, fadd_s1.exp, (Uint)((Ull)fadd_s1.frac >> 32), (Uint)fadd_s1.frac, fadd_w.exp_diff, fadd_w.align_exp, (Uint)((Ull)fadd_w.s1_align_frac >> 32), (Uint)fadd_w.s1_align_frac);
     //     printf("//csa_s: %x %02.2x %08.8x_%08.8x (%x)-> %x %08.8x_%08.8x\n", ex1_d.s, ex1_d.exp, (Uint)((Ull)ex1_d.csa_s >> 32), (Uint)ex1_d.csa_s, fadd_w.exp_diff, fadd_w.align_exp, (Uint)((Ull)fadd_w.s2_align_frac >> 32), (Uint)fadd_w.s2_align_frac);
@@ -386,30 +391,61 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     /***  normalize  **********************************************************************************************/
     /**************************************************************************************************************/
 #if 1
-    ex3_w.lzc = (ex2_d.frac & 0x400000LL)   ? 30
-                : (ex2_d.frac & 0x200000LL) ? 31
-                : (ex2_d.frac & 0x100000LL) ? 0
-                : (ex2_d.frac & 0x080000LL) ? 1
-                : (ex2_d.frac & 0x040000LL) ? 2
-                : (ex2_d.frac & 0x020000LL) ? 3
-                : (ex2_d.frac & 0x010000LL) ? 4
-                : (ex2_d.frac & 0x008000LL) ? 5
-                : (ex2_d.frac & 0x004000LL) ? 6
-                : (ex2_d.frac & 0x002000LL) ? 7
-                : (ex2_d.frac & 0x001000LL) ? 8
-                : (ex2_d.frac & 0x000800LL) ? 9
-                : (ex2_d.frac & 0x000400LL) ? 10
-                : (ex2_d.frac & 0x000200LL) ? 11
-                : (ex2_d.frac & 0x000100LL) ? 12
-                : (ex2_d.frac & 0x000080LL) ? 13
-                : (ex2_d.frac & 0x000040LL) ? 14
-                : (ex2_d.frac & 0x000020LL) ? 15
-                : (ex2_d.frac & 0x000010LL) ? 16
-                : (ex2_d.frac & 0x000008LL) ? 17
-                : (ex2_d.frac & 0x000004LL) ? 18
-                : (ex2_d.frac & 0x000002LL) ? 19
-                : (ex2_d.frac & 0x000001LL) ? 20
-                                            : 21;
+    ex3_w.lzc = (ex2_d.frac & 0x1000LL << PEXT)   ? 30
+                : (ex2_d.frac & 0x0800LL << PEXT) ? 31
+                : (ex2_d.frac & 0x0400LL << PEXT) ? 0
+                : (ex2_d.frac & 0x0200LL << PEXT) ? 1
+                : (ex2_d.frac & 0x0100LL << PEXT) ? 2
+                : (ex2_d.frac & 0x0080LL << PEXT) ? 3
+                : (ex2_d.frac & 0x0040LL << PEXT) ? 4
+                : (ex2_d.frac & 0x0020LL << PEXT) ? 5
+                : (ex2_d.frac & 0x0010LL << PEXT) ? 6
+                : (ex2_d.frac & 0x0008LL << PEXT) ? 7
+                : (ex2_d.frac & 0x0004LL << PEXT) ? 8
+                : (ex2_d.frac & 0x0002LL << PEXT) ? 9
+                : (ex2_d.frac & 0x0001LL << PEXT) ? 10
+                :
+#if (PEXT >= 1)
+                (ex2_d.frac & 0x0001LL << PEXT - 1) ? 11
+                :
+#endif
+#if (PEXT >= 2)
+                (ex2_d.frac & 0x0001LL << PEXT - 2) ? 12
+                :
+#endif
+#if (PEXT >= 3)
+                (ex2_d.frac & 0x0001LL << PEXT - 3) ? 13
+                :
+#endif
+#if (PEXT >= 4)
+                (ex2_d.frac & 0x0001LL << PEXT - 4) ? 14
+                :
+#endif
+#if (PEXT >= 5)
+                (ex2_d.frac & 0x0001LL << PEXT - 5) ? 15
+                :
+#endif
+#if (PEXT >= 6)
+                (ex2_d.frac & 0x0001LL << PEXT - 6) ? 16
+                :
+#endif
+#if (PEXT >= 7)
+                (ex2_d.frac & 0x0001LL << PEXT - 7) ? 17
+                :
+#endif
+#if (PEXT >= 8)
+                (ex2_d.frac & 0x0001LL << PEXT - 8) ? 18
+                :
+#endif
+#if (PEXT >= 9)
+                (ex2_d.frac & 0x0001LL << PEXT - 9) ? 19
+                :
+#endif
+#if (PEXT >= 10)
+                (ex2_d.frac & 0x0001LL << PEXT - 10) ? 20
+                                                     : :
+#endif
+                                                           11 + PEXT;
     // if (debug) {
     //     printf("//ex2:%x %x %08.8x_%08.8x ", ex2_d.s, ex2_d.exp, (Uint)((Ull)ex2_d.frac >> 32), (Uint)ex2_d.frac);
     // }
@@ -433,7 +469,7 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
             ex3_d.exp = 0x1f;
         } else {
             ex3_d.s = ex2_d.s;
-            ex3_d.frac = (ex2_d.frac >> 2) >> 10; // ★★★ガード対応必要
+            ex3_d.frac = ex2_d.frac >> (2 + PEXT); // ★★★ガード対応必要
             ex3_d.exp = ex2_d.exp + 2;
         }
     } else if (ex3_w.lzc == 31) {
@@ -446,10 +482,10 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
             ex3_d.exp = 0x1f;
         } else {
             ex3_d.s = ex2_d.s;
-            ex3_d.frac = (ex2_d.frac >> 1) >> 10; // ★★★ガード対応必要
+            ex3_d.frac = ex2_d.frac >> (1 + PEXT); // ★★★ガード対応必要
             ex3_d.exp = ex2_d.exp + 1;
         }
-    } else if (ex3_w.lzc <= 20) { // ■■■
+    } else if (ex3_w.lzc <= (10 + PEXT)) { // ■■■
         if (debug) {
             printf("lzc==%d\n", ex3_w.lzc);
         }
@@ -459,11 +495,11 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
             ex3_d.exp = 0x1f;
         } else if (ex2_d.exp <= ex3_w.lzc) { /* subnormal num */
             ex3_d.s = ex2_d.s;
-            ex3_d.frac = (ex2_d.frac << ex2_d.exp) >> 10; // ■■■
+            ex3_d.frac = (ex2_d.frac << ex2_d.exp) >> PEXT; // ■■■
             ex3_d.exp = 0x00;
         } else { /* normalized num */
             ex3_d.s = ex2_d.s;
-            ex3_d.frac = (ex2_d.frac << ex3_w.lzc) >> 10; // ■■■
+            ex3_d.frac = (ex2_d.frac << ex3_w.lzc) >> PEXT; // ■■■
             ex3_d.exp = ex2_d.exp - ex3_w.lzc;
         }
 #define NO_GUARD_BITS
@@ -500,8 +536,8 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
         }
 #endif
     } else { /* zero */
-        // if (debug) {
-        //     printf("zero\n");
+             // if (debug) {
+        printf("zero\n");
         // }
         ex3_d.s = 0;
         ex3_d.frac = 0x000;
@@ -510,9 +546,9 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
 #endif
 
     // if (debug) {
-    //     printf("//ex3:%x %x %x\n", ex3_d.s, ex3_d.exp, ex3_d.frac);
+    printf("//ex3:%x %x %x\n", ex3_d.s, ex3_d.exp, ex3_d.frac);
     // }
-
+    // printf("\nex3_d.zero: %x , ex3_d.inf: %x , ex3_d.nan: %x , ex3_d.s: %x , ex3_d.exp: %x , ex3_d.frac: %x\n", ex3_d.zero, ex3_d.inf, ex3_d.nan, ex3_d.s, ex3_d.exp, ex3_d.frac);
     out.raw.w = (ex3_d.s << 15) | (ex3_d.exp << 10) | (ex3_d.frac);
     org.flo.w = i1 + i2 * i3;
     printf("\n\n%x", out.raw.w);
