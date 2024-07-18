@@ -275,8 +275,8 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     csa_line(&C4, &S4, S3[0], C3[0], S3[1]);
     csa_line(&C5, &S5, S4, C4, C3[1]);
 
-    ex1_d.csa_s = S5; // sum
-    ex1_d.csa_c = C5; // carry
+    ex1_d.csa_s = S5 >> (10 - PEXT); // sum
+    ex1_d.csa_c = C5 >> (10 - PEXT); // carry
 
     printf("%llx", S5 + C5);
 
