@@ -109,6 +109,14 @@ void soft16(Uint i1, Uint i2, Uint i3, short *o, int debug) {
     s1.inf = (op == 1) ? 0 : (in1.base.exp == 31) && (in1.base.frac == 0);
     s1.nan = (op == 1) ? 0 : (in1.base.exp == 31) && (in1.base.frac != 0);
 
+    s2.s = in2.base.s;
+    s2.exp = in2.base.exp;
+    s2.frac = (in2.base.exp == 0) ? (0 << 10) | in2.base.frac
+                                  : (1 << 10) | in2.base.frac;
+    s2.zero = (in2.base.exp == 0) && (in2.base.frac == 0);
+    s2.inf = (in2.base.exp == 31) && (in2.base.frac == 0);
+    s2.nan = (in2.base.exp == 31) && (in2.base.frac != 0);
+
     s3.s = (op == 2) ? 0 : in3.base.s;
     s3.exp = (op == 2) ? 127 : in3.base.exp;
     s3.frac = (op == 2)             ? (1 << 10)
