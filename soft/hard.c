@@ -21,37 +21,38 @@ union fpn {
 } in1, in2, in3, out, org;
 
 void radix4(Uint *pp, Uint *ps, Uint a, Uint b) {
+    printf("\na:%x, b:%x", a, b);
     switch (b) {
     case 0:
         *pp = 0;
         *ps = 0;
         break;
     case 1:
-        *pp = a & 0x3ff;
+        *pp = a & 0xfff;
         *ps = 0;
         break;
     case 2:
-        *pp = a & 0x3ff;
+        *pp = a & 0xfff;
         *ps = 0;
         break;
     case 3:
-        *pp = a << 1 & 0x3ff;
+        *pp = a << 1 & 0xfff;
         *ps = 0;
         break;
     case 4:
-        *pp = ~(a << 1) & 0x3ff;
+        *pp = ~(a << 1) & 0xfff;
         *ps = 1;
         break;
     case 5:
-        *pp = ~a & 0x3ff;
+        *pp = ~a & 0xfff;
         *ps = 1;
         break;
     case 6:
-        *pp = ~a & 0x3ff;
+        *pp = ~a & 0xfff;
         *ps = 1;
         break;
     default:
-        *pp = ~0 & 0x3ff;
+        *pp = ~0 & 0xfff;
         *ps = 1;
         break;
     }
@@ -61,30 +62,28 @@ void partial_product(Uint *pp, Uint *ps, Uint a, Uint b, Uint pos) {
     Uint tp, ts;
 
     radix4(&tp, &ts, a, b);
+    printf("\ntp:%x, ts:%x", tp, ts);
     switch (pos) {
     case 0:
         *pp = ((~ts & 1) << 14) | (ts << 13) | (ts << 12) | tp;
+        printf("\npp:%x", ((~ts & 1) << 14) | (ts << 13) | (ts << 12) | tp);
         *ps = ts;
         break;
     case 1:
     case 2:
     case 3:
-    case 4:
-    case 5:
-    case 6:
-    case 7:
-    case 8:
-    case 9:
-    case 10:
         *pp = (1 << 13) | ((~ts & 1) << 12) | tp;
+        printf("\npp:%x", (1 << 13) | ((~ts & 1) << 12) | tp);
         *ps = ts;
         break;
-    case 11:
+    case 4:
         *pp = ((~ts & 1) << 12) | tp;
+        printf("\npp:%x", ((~ts & 1) << 12) | tp);
         *ps = ts;
         break;
     default:
         *pp = tp;
+        printf("\npp:%x", tp);
         *ps = ts;
         break;
     }
@@ -169,7 +168,7 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     } ex2_d;
 
     struct ex3_w {
-        Uint lzc : 4;
+        Uint lzc : 5;
     } ex3_w;
 
     struct ex3_d {
@@ -198,6 +197,10 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     s3.zero = (op == 2) ? 0 : (in3.base.exp == 0) && (in3.base.frac == 0);
     s3.inf = (op == 2) ? 0 : (in3.base.exp == 31) && (in3.base.frac == 0);
     s3.nan = (op == 2) ? 0 : (in3.base.exp == 31) && (in3.base.frac != 0);
+
+    printf("\ns1.zero: %x , s1.inf: %x , s1.nan: %x , s1.s: %x , s1.exp: %x , s1.frac: %x \n", s1.zero, s1.inf, s1.nan, s1.s, s1.exp, s1.frac);
+    printf("\ns2.zero: %x , s2.inf: %x , s2.nan: %x , s2.s: %x , s2.exp: %x , s2.frac: %x \n", s2.zero, s2.inf, s2.nan, s2.s, s2.exp, s2.frac);
+    printf("\ns3.zero: %x , s3.inf: %x , s3.nan: %x , s3.s: %x , s3.exp: %x , s3.frac: %x \n", s3.zero, s3.inf, s3.nan, s3.s, s3.exp, s3.frac);
 
     // org.flo.w = in1.flo.w + in2.flo.w * in3.flo.w;
     // if (debug) {
@@ -231,20 +234,15 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     pp[4] = ((Ull)tp << 8) | ((Ull)ps[3] << 6); // if (debug) {printf("pp[ 4]=%04.4x_%08.8x ps[ 4]=%d\n", (Uint)(pp[ 4]>>32), (Uint)pp[ 4], ps[ 4]);} /*9,8, 7*/
     partial_product(&tp, &ps[5], s2.frac, (s3.frac >> 9) & 7, 5);
     pp[5] = ((Ull)tp << 10) | ((Ull)ps[4] << 8); // if (debug) {printf("pp[ 5]=%04.4x_%08.8x ps[ 5]=%d\n", (Uint)(pp[ 5]>>32), (Uint)pp[ 5], ps[ 5]);} /*11,10,9*/
-    partial_product(&tp, &ps[6], s2.frac, (s3.frac >> 11) & 7, 6);
-    pp[6] = ((Ull)tp << 12) | ((Ull)ps[5] << 10); // if (debug) {printf("pp[ 6]=%04.4x_%08.8x ps[ 6]=%d\n", (Uint)(pp[ 6]>>32), (Uint)pp[ 6], ps[ 6]);} /*13,12,11*/
-    partial_product(&tp, &ps[7], s2.frac, (s3.frac >> 13) & 7, 7);
-    pp[7] = ((Ull)tp << 14) | ((Ull)ps[6] << 12); // if (debug) {printf("pp[ 7]=%04.4x_%08.8x ps[ 7]=%d\n", (Uint)(pp[ 7]>>32), (Uint)pp[ 7], ps[ 7]);} /*15,14,13*/
-    partial_product(&tp, &ps[8], s2.frac, (s3.frac >> 15) & 7, 8);
-    pp[8] = ((Ull)tp << 16) | ((Ull)ps[7] << 14); // if (debug) {printf("pp[ 8]=%04.4x_%08.8x ps[ 8]=%d\n", (Uint)(pp[ 8]>>32), (Uint)pp[ 8], ps[ 8]);} /*17,16,15*/
-    partial_product(&tp, &ps[9], s2.frac, (s3.frac >> 17) & 7, 9);
-    pp[9] = ((Ull)tp << 18) | ((Ull)ps[8] << 16); // if (debug) {printf("pp[ 9]=%04.4x_%08.8x ps[ 9]=%d\n", (Uint)(pp[ 9]>>32), (Uint)pp[ 9], ps[ 9]);} /*19,18,17*/
-    partial_product(&tp, &ps[10], s2.frac, (s3.frac >> 19) & 7, 10);
-    pp[10] = ((Ull)tp << 20) | ((Ull)ps[9] << 18); // if (debug) {printf("pp[10]=%04.4x_%08.8x ps[10]=%d\n", (Uint)(pp[10]>>32), (Uint)pp[10], ps[10]);} /*21,20,19*/
-    partial_product(&tp, &ps[11], s2.frac, (s3.frac >> 21) & 7, 11);
-    pp[11] = ((Ull)tp << 22) | ((Ull)ps[10] << 20); // if (debug) {printf("pp[11]=%04.4x_%08.8x ps[11]=%d\n", (Uint)(pp[11]>>32), (Uint)pp[11], ps[11]);} /**23,22,21*/
 
-    // Ull x1 = (pp[0] + pp[1] + pp[2] + pp[3] + pp[4] + pp[5] + pp[6] + pp[7] + pp[8] + pp[9] + pp[10] + pp[11]);
+    Ull x1 = (pp[0] + pp[1] + pp[2] + pp[3] + pp[4] + pp[5]);
+    printf("//x1(sum of pp)=%08.8x_%08.8x ->>10 %08.8x\n", (Uint)(x1 >> 16), (Uint)x1, (Uint)(x1 >> 10));
+    printf("\n%llx\n", x1);
+    printf("%x", ex1_d.exp);
+    Ull x2 = (Ull)s2.frac * (Ull)s3.frac;
+    printf("//x2(s2 * s3)  =%08.8x_%08.8x ->>10 %08.8x\n", (Uint)(x2 >> 16), (Uint)x2, (Uint)(x2 >> 10));
+    printf("\n%llx\n", x2);
+
     // if (debug) {
     //     printf("//x1(sum of pp)=%08.8x_%08.8x ->>23 %08.8x\n", (Uint)(x1 >> 32), (Uint)x1, (Uint)(x1 >> 23));
     // }
@@ -258,27 +256,30 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     /**************************************************************************************************************/
     csa_line(&C1[0], &S1[0], pp[0], pp[1], pp[2]);
     csa_line(&C1[1], &S1[1], pp[3], pp[4], pp[5]);
-    csa_line(&C1[2], &S1[2], pp[6], pp[7], pp[8]);
-    csa_line(&C1[3], &S1[3], pp[9], pp[10], pp[11]);
+
+    printf("\nS1[0]==%llx\n", (Ull)S1[0]);
+    printf("\nS1[1]==%llx\n", (Ull)S1[1]);
+
+    printf("\nC1[0]==%llx\n", (Ull)C1[0]);
+    printf("\nC1[1]==%llx\n", (Ull)C1[1]);
 
     csa_line(&C2[0], &S2[0], S1[0], C1[0], S1[1]);
-    csa_line(&C2[1], &S2[1], C1[1], S1[2], C1[2]);
-    csa_line(&C2[2], &S2[2], S1[3], C1[3], 0); // pp[12] は FP16 では不要
+    csa_line(&C2[1], &S2[1], C1[1], 0, 0);
 
     csa_line(&C3[0], &S3[0], S2[0], C2[0], S2[1]);
-    csa_line(&C3[1], &S3[1], C2[1], S2[2], C2[2]);
+    csa_line(&C3[1], &S3[1], C2[1], 0, 0);
 
     csa_line(&C4, &S4, S3[0], C3[0], S3[1]);
     csa_line(&C5, &S5, S4, C4, C3[1]);
 
-    ex1_d.csa_s = S5 >> (10 - PEXT); // sum
-    ex1_d.csa_c = C5 >> (10 - PEXT); // carry
+    ex1_d.csa_s = S5; // sum
+    ex1_d.csa_c = C5; // carry
 
     ex1_d.zero = (s2.zero && !s3.inf && !s3.nan) || (s3.zero && !s2.inf && !s2.nan);
     ex1_d.inf = (s2.inf && !s3.zero && !s3.nan) || (s3.inf && !s2.zero && !s2.nan);
     ex1_d.nan = s2.nan || s3.nan || (s2.inf && s3.zero) || (s3.inf && s2.zero);
 
-    // printf("\nex1_d.zero: %x , ex1_d.inf: %x , ex1_d.nan: %x , ex1_d.s: %x , ex1_d.exp: %x , ex1_d.csa_c: %x , ex1_d.csa_s: %x \n", ex1_d.zero, ex1_d.inf, ex1_d.nan, ex1_d.s, ex1_d.exp, ex1_d.csa_c, ex1_d.csa_s);
+    printf("\nex1_d.zero: %x , ex1_d.inf: %x , ex1_d.nan: %x , ex1_d.s: %x , ex1_d.exp: %x , ex1_d.csa_c: %x , ex1_d.csa_s: %x \n", ex1_d.zero, ex1_d.inf, ex1_d.nan, ex1_d.s, ex1_d.exp, ex1_d.csa_c, ex1_d.csa_s);
 
     // if (debug) {
     //     printf("//S5           =%08.8x_%08.8x\n", (Uint)(S5 >> 32), (Uint)S5);
@@ -294,12 +295,12 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     /**************************************************************************************************************/
     fadd_s1.s = s1.s;
     fadd_s1.exp = (0 < s1.exp && s1.exp < 31) ? (s1.exp - 1) : s1.exp;
-    fadd_s1.frac = (0 < s1.exp && s1.exp < 31) ? (Ull)s1.frac << (PEXT + 1) : (Ull)s1.frac << PEXT;
+    fadd_s1.frac = (0 < s1.exp && s1.exp < 31) ? (Ull)s1.frac << (10 + 1) : (Ull)s1.frac << 10;
     fadd_s1.zero = s1.zero;
     fadd_s1.inf = s1.inf;
     fadd_s1.nan = s1.nan;
 
-    // printf("\nfadd_s1.zero: %x , fadd_s1.inf: %x , fadd_s1.nan: %x , fadd_s1.s: %x , fadd_s1.exp: %x , fadd_s1.frac: %x \n", fadd_s1.zero, fadd_s1.inf, fadd_s1.nan, fadd_s1.s, fadd_s1.exp, fadd_s1.frac);
+    printf("\nfadd_s1.zero: %x , fadd_s1.inf: %x , fadd_s1.nan: %x , fadd_s1.s: %x , fadd_s1.exp: %x , fadd_s1.frac: %x \n", fadd_s1.zero, fadd_s1.inf, fadd_s1.nan, fadd_s1.s, fadd_s1.exp, fadd_s1.frac);
 
     /* nan  + any  -> nan */
     /* inf  + -inf -> nan */
@@ -307,14 +308,14 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     /* -inf + (~inf  & ~nan) -> inf */
     fadd_w.exp_comp = fadd_s1.exp > ex1_d.exp ? 1 : 0;
     fadd_w.exp_diff = fadd_w.exp_comp ? (fadd_s1.exp - ex1_d.exp) : (ex1_d.exp - fadd_s1.exp);
-    if (fadd_w.exp_diff > (12 + PEXT))
-        fadd_w.exp_diff = (12 + PEXT);
+    if (fadd_w.exp_diff > 22)
+        fadd_w.exp_diff = 22;
     fadd_w.align_exp = fadd_w.exp_comp ? fadd_s1.exp : ex1_d.exp;
     fadd_w.s1_align_frac = fadd_s1.frac >> (fadd_w.exp_comp ? 0 : fadd_w.exp_diff);
-    fadd_w.s2_align_frac = (Ull)ex1_d.csa_s >> (ex1_d.zero ? (12 + PEXT) : fadd_w.exp_comp ? fadd_w.exp_diff
-                                                                                           : 0);
-    fadd_w.s3_align_frac = (Ull)ex1_d.csa_c >> (ex1_d.zero ? (12 + PEXT) : fadd_w.exp_comp ? fadd_w.exp_diff
-                                                                                           : 0);
+    fadd_w.s2_align_frac = (Ull)ex1_d.csa_s >> (ex1_d.zero ? 22 : fadd_w.exp_comp ? fadd_w.exp_diff
+                                                                                  : 0);
+    fadd_w.s3_align_frac = (Ull)ex1_d.csa_c >> (ex1_d.zero ? 22 : fadd_w.exp_comp ? fadd_w.exp_diff
+                                                                                  : 0);
     // if (debug) {
     //     printf("//fadd_s1: %x %02.2x %08.8x_%08.8x (%x)-> %x %08.8x_%08.8x\n", fadd_s1.s, fadd_s1.exp, (Uint)((Ull)fadd_s1.frac >> 32), (Uint)fadd_s1.frac, fadd_w.exp_diff, fadd_w.align_exp, (Uint)((Ull)fadd_w.s1_align_frac >> 32), (Uint)fadd_w.s1_align_frac);
     //     printf("//csa_s: %x %02.2x %08.8x_%08.8x (%x)-> %x %08.8x_%08.8x\n", ex1_d.s, ex1_d.exp, (Uint)((Ull)ex1_d.csa_s >> 32), (Uint)ex1_d.csa_s, fadd_w.exp_diff, fadd_w.align_exp, (Uint)((Ull)fadd_w.s2_align_frac >> 32), (Uint)fadd_w.s2_align_frac);
@@ -361,16 +362,17 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     //     printf("//ex2_d.frac2=%08.8x_%08.8x(c+s-a)\n", (Uint)((Ull)ex2_d.frac2 >> 32), (Uint)ex2_d.frac2);
     // }
 
-    ex2_d.s = (fadd_s1.s == ex1_d.s) ? fadd_s1.s : (ex2_d.frac2 & (0x200LL << PEXT)) ? fadd_s1.s
-                                                                                     : ex1_d.s;
+    ex2_d.s = (fadd_s1.s == ex1_d.s) ? fadd_s1.s : (ex2_d.frac2 & 0x400000LL) ? fadd_s1.s
+                                                                              : ex1_d.s;
     ex2_d.exp = fadd_w.align_exp;
-    ex2_d.frac = (fadd_s1.s == ex1_d.s) ? ex2_d.frac0 : (ex2_d.frac2 & (0x200LL << PEXT)) ? ex2_d.frac1
-                                                                                          : ex2_d.frac2 & (0xffffffffffffLL >> (10 - PEXT));
+    ex2_d.frac = (fadd_s1.s == ex1_d.s) ? ex2_d.frac0 : (ex2_d.frac2 & 0x400000LL) ? ex2_d.frac1
+                                                                                   : ex2_d.frac2 & 0xffffffffffffLL;
     /* 12bit */
     ex2_d.zero = ex2_d.frac == 0;
     ex2_d.inf = (!fadd_s1.s && fadd_s1.inf && !(ex1_d.s && ex1_d.inf) && !ex1_d.nan) || (fadd_s1.s && fadd_s1.inf && !(!ex1_d.s && ex1_d.inf) && !ex1_d.nan) || (!ex1_d.s && ex1_d.inf && !(fadd_s1.s && fadd_s1.inf) && !fadd_s1.nan) || (ex1_d.s && ex1_d.inf && !(!fadd_s1.s && fadd_s1.inf) && !fadd_s1.nan);
     ex2_d.nan = fadd_s1.nan || ex1_d.nan;
-    printf("%x", ex2_d.frac);
+    printf("\nex2_d.zero: %x , ex2_d.inf: %x , ex2_d.nan: %x , ex2_d.s: %x , ex2_d.exp: %x , ex2_d.frac: %x , ex2_d.frac0: %x , ex2_d.frac1: %x , ex2_d.frac2: %x\n", ex2_d.zero, ex2_d.inf, ex2_d.nan, ex2_d.s, ex2_d.exp, ex2_d.frac, ex2_d.frac0, ex2_d.frac1, ex2_d.frac2);
+
     // if (debug) {
     //     printf("//ex2_d.frac =%08.8x_%08.8x(a+c+s)\n", (Uint)((Ull)ex2_d.frac >> 32), (Uint)ex2_d.frac);
     // }
@@ -384,33 +386,70 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
     /***  normalize  **********************************************************************************************/
     /**************************************************************************************************************/
 #if 1
-    ex3_w.lzc = (ex2_d.frac & (0x400LL << PEXT))   ? 0
-                : (ex2_d.frac & (0x200LL << PEXT)) ? 1
-                : (ex2_d.frac & (0x100LL << PEXT)) ? 2
-                : (ex2_d.frac & (0x080LL << PEXT)) ? 3
-                : (ex2_d.frac & (0x040LL << PEXT)) ? 4
-                : (ex2_d.frac & (0x020LL << PEXT)) ? 5
-                : (ex2_d.frac & (0x010LL << PEXT)) ? 6
-                : (ex2_d.frac & (0x008LL << PEXT)) ? 7
-                : (ex2_d.frac & (0x004LL << PEXT)) ? 8
-                : (ex2_d.frac & (0x002LL << PEXT)) ? 9
-                : (ex2_d.frac & (0x001LL << PEXT)) ? 10
-                : (ex2_d.frac & (0x000LL << PEXT)) ? 11 + PEXT
-                                                   : 11 + PEXT;
-#endif
-    /*    if (debug) {
-            printf("//ex2:%x %x %08.8x_%08.8x ", ex2_d.s, ex2_d.exp, (Uint)((Ull)ex2_d.frac >> 32), (Uint)ex2_d.frac);
-        }*/
-
+    ex3_w.lzc = (ex2_d.frac & 0x400000LL)   ? 30
+                : (ex2_d.frac & 0x200000LL) ? 31
+                : (ex2_d.frac & 0x100000LL) ? 0
+                : (ex2_d.frac & 0x080000LL) ? 1
+                : (ex2_d.frac & 0x040000LL) ? 2
+                : (ex2_d.frac & 0x020000LL) ? 3
+                : (ex2_d.frac & 0x010000LL) ? 4
+                : (ex2_d.frac & 0x008000LL) ? 5
+                : (ex2_d.frac & 0x004000LL) ? 6
+                : (ex2_d.frac & 0x002000LL) ? 7
+                : (ex2_d.frac & 0x001000LL) ? 8
+                : (ex2_d.frac & 0x000800LL) ? 9
+                : (ex2_d.frac & 0x000400LL) ? 10
+                : (ex2_d.frac & 0x000200LL) ? 11
+                : (ex2_d.frac & 0x000100LL) ? 12
+                : (ex2_d.frac & 0x000080LL) ? 13
+                : (ex2_d.frac & 0x000040LL) ? 14
+                : (ex2_d.frac & 0x000020LL) ? 15
+                : (ex2_d.frac & 0x000010LL) ? 16
+                : (ex2_d.frac & 0x000008LL) ? 17
+                : (ex2_d.frac & 0x000004LL) ? 18
+                : (ex2_d.frac & 0x000002LL) ? 19
+                : (ex2_d.frac & 0x000001LL) ? 20
+                                            : 21;
+    // if (debug) {
+    //     printf("//ex2:%x %x %08.8x_%08.8x ", ex2_d.s, ex2_d.exp, (Uint)((Ull)ex2_d.frac >> 32), (Uint)ex2_d.frac);
+    // }
+    printf("\nlzc==%d\n", ex3_w.lzc);
     if (ex2_d.nan) {
         ex3_d.s = 1;
         ex3_d.frac = 0x200;
         ex3_d.exp = 0x1f;
+
     } else if (ex2_d.inf) {
         ex3_d.s = ex2_d.s;
         ex3_d.frac = 0x000;
         ex3_d.exp = 0x1f;
-    } else if (ex3_w.lzc <= (11 + PEXT)) {
+    } else if (ex3_w.lzc == 30) {
+        if (debug) {
+            printf("lzc==%d\n", ex3_w.lzc);
+        }
+        if (ex2_d.exp >= 29) {
+            ex3_d.s = ex2_d.s;
+            ex3_d.frac = 0x000;
+            ex3_d.exp = 0x1f;
+        } else {
+            ex3_d.s = ex2_d.s;
+            ex3_d.frac = (ex2_d.frac >> 2) >> 10; // ★★★ガード対応必要
+            ex3_d.exp = ex2_d.exp + 2;
+        }
+    } else if (ex3_w.lzc == 31) {
+        if (debug) {
+            printf("lzc==%d\n", ex3_w.lzc);
+        }
+        if (ex2_d.exp >= 30) {
+            ex3_d.s = ex2_d.s;
+            ex3_d.frac = 0x000;
+            ex3_d.exp = 0x1f;
+        } else {
+            ex3_d.s = ex2_d.s;
+            ex3_d.frac = (ex2_d.frac >> 1) >> 10; // ★★★ガード対応必要
+            ex3_d.exp = ex2_d.exp + 1;
+        }
+    } else if (ex3_w.lzc <= 20) { // ■■■
         if (debug) {
             printf("lzc==%d\n", ex3_w.lzc);
         }
@@ -418,18 +457,13 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
             ex3_d.s = ex2_d.s;
             ex3_d.frac = 0x000;
             ex3_d.exp = 0x1f;
-        } else if ((int)ex2_d.exp <= (int)ex3_w.lzc) { /* subnormal num */
+        } else if (ex2_d.exp <= ex3_w.lzc) { /* subnormal num */
             ex3_d.s = ex2_d.s;
-            ex3_d.frac = ex2_d.frac >> (ex3_w.lzc + 1 - ex2_d.exp);
+            ex3_d.frac = (ex2_d.frac << ex2_d.exp) >> 10; // ■■■
             ex3_d.exp = 0x00;
         } else { /* normalized num */
             ex3_d.s = ex2_d.s;
-
-            // ガードビットを考慮した丸め処理
-            // int guard_bit = (ex2_d.frac >> (ex3_w.lzc + 1)) & 1;
-            ex3_d.frac = (ex2_d.frac << ex3_w.lzc) >> PEXT + 1;
-            // ex3_d.frac = (ex2_d.frac >> ex3_w.lzc) + guard_bit;
-
+            ex3_d.frac = (ex2_d.frac << ex3_w.lzc) >> 10; // ■■■
             ex3_d.exp = ex2_d.exp - ex3_w.lzc;
         }
 #define NO_GUARD_BITS
@@ -473,7 +507,7 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
         ex3_d.frac = 0x000;
         ex3_d.exp = 0x00;
     }
-    // #endif
+#endif
 
     // if (debug) {
     //     printf("//ex3:%x %x %x\n", ex3_d.s, ex3_d.exp, ex3_d.frac);
@@ -481,7 +515,7 @@ int hard16(Uint i1, Uint i2, Uint i3, short *o, Uint debug) {
 
     out.raw.w = (ex3_d.s << 15) | (ex3_d.exp << 10) | (ex3_d.frac);
     org.flo.w = i1 + i2 * i3;
-    printf("\n\n%d", out.raw.w);
+    printf("\n\n%x", out.raw.w);
     /*
     Uint diff = out.raw.w > org.raw.w ? out.raw.w - org.raw.w : org.raw.w - out.raw.w;
 
@@ -511,9 +545,10 @@ int main() {
     // printf("\n%x\n\n", 0b0011110000000000);
 
     // hard16(0b0100011000000000, 0b0100010100000000, 0b0100010000000000, &ans, 0);
-    //  hard16(0b0011110000000000, 0b0100000000000000, 0b0100001000000000, &ans, 0);
-    // hard16(0b0011110000000000, 0b0011110000000000, 0b0011110000000000, &ans, 0);
-    hard16(0b0000000000000000, 0b0000000000000000, 0b0000000000000000, &ans, 0);
+    // hard16(0b0011110000000000, 0b0100000000000000, 0b0100001000000000, &ans, 0); // 1*2+3
+    hard16(0b0011110000000000, 0b0011110000000000, 0b0011110000000000, &ans, 0); // 1*1+1
+    // hard16(0b0000000000000000, 0b0000000000000000, 0b0000000000000000, &ans, 0); // 0*0+0
+    // hard16(0b0100000000000000, 0b0100000000000000, 0b0100000000000000, &ans, 0); // 2*2+2
     printf("\n\n%x", ans);
 
     return 0;
